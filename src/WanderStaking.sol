@@ -8,6 +8,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract WanderStaking is Ownable, Pausable {
     using SafeERC20 for IERC20;
+
     IERC20 public immutable token;
 
     event Stake(address indexed user, uint256 amount);
@@ -19,9 +20,7 @@ contract WanderStaking is Ownable, Pausable {
     mapping(address => uint256) userStake;
     uint256 internal totalStaked;
 
-    constructor(address initialOwner, IERC20 _token)
-        Ownable(initialOwner)
-    {
+    constructor(address initialOwner, IERC20 _token) Ownable(initialOwner) {
         token = _token;
     }
 
@@ -29,7 +28,7 @@ contract WanderStaking is Ownable, Pausable {
         _pause();
     }
 
-    function unpause() public onlyOwner() {
+    function unpause() public onlyOwner {
         _unpause();
     }
 

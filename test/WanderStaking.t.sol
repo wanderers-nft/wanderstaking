@@ -13,7 +13,7 @@ contract WanderStakingTest is Test {
 
     function setUp() public {
         token = new TestToken();
-        
+
         staking = new WanderStaking(address(this), IERC20(token));
         token.approve(address(staking), ~uint256(0));
     }
@@ -63,9 +63,9 @@ contract WanderStakingTest is Test {
 
         // Pad staking contract with some tokens first
         vm.startPrank(msg.sender);
-            token.mint(msg.sender, amount * 2);
-            token.approve(address(staking), ~uint256(0));
-            staking.stake(amount * 2);
+        token.mint(msg.sender, amount * 2);
+        token.approve(address(staking), ~uint256(0));
+        staking.stake(amount * 2);
         vm.stopPrank();
 
         token.mint(address(this), amount);
