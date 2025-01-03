@@ -2,5 +2,9 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+gas_reports = ["WanderStaking"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[fuzz]
+runs = 8192
+max_test_rejects = 16384
