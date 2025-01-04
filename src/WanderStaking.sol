@@ -13,6 +13,7 @@ contract WanderStaking is Initializable, PausableUpgradeable, OwnableUpgradeable
 
     event Stake(address indexed user, uint256 amount);
     event Unstake(address indexed user, uint256 amount);
+    event SpendFromStake(address indexed user, address indexed to, uint256 amount);
 
     error ZeroAmount();
     error InsufficientBalance();
@@ -72,6 +73,24 @@ contract WanderStaking is Initializable, PausableUpgradeable, OwnableUpgradeable
         emit Unstake(msg.sender, amount);
 
         token.safeTransfer(msg.sender, amount);
+    }
+
+    function spendFromStake(address to, uint256 amount) external whenNotPaused {
+        if (amount == 0) {
+            revert ZeroAmount();
+        }
+
+        if (userStake[msg.sender] < amount) {
+            revert InsufficientBalance();
+        }
+
+        userStake[msg.sender] -= amount;
+        totalStaked -= amount;
+
+        emit Unstake(msg.sender, amount);
+        emit SpendFromStake(msg.sender, to, amount);
+
+        token.safeTransfer(to, amount);
     }
 
     function getTotalStaked() external view returns (uint256) {
