@@ -6,6 +6,7 @@ import {WanderStaking} from "../src/WanderStaking.sol";
 import {TestToken} from "../src/TestToken.sol";
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract WanderStakingTest is Test {
     WanderStaking public staking;
@@ -14,7 +15,13 @@ contract WanderStakingTest is Test {
     function setUp() public {
         token = new TestToken();
 
-        staking = new WanderStaking(address(this), IERC20(token));
+        WanderStaking stakingImpl = new WanderStaking();
+
+        bytes memory data = abi.encodeWithSignature("initialize(address,address)", address(this), address(token));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(stakingImpl), data);
+
+        staking = WanderStaking(address(proxy));
+
         token.approve(address(staking), ~uint256(0));
     }
 
