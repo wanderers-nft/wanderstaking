@@ -6,6 +6,7 @@ import {WanderStaking} from "../src/WanderStaking.sol";
 import {TestToken} from "../src/TestToken.sol";
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract WanderStakingTest is Test {
     WanderStaking public staking;
@@ -14,7 +15,13 @@ contract WanderStakingTest is Test {
     function setUp() public {
         token = new TestToken();
 
-        staking = new WanderStaking(address(this), IERC20(token));
+        WanderStaking stakingImpl = new WanderStaking();
+
+        bytes memory data = abi.encodeWithSignature("initialize(address,address)", address(this), address(token));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(stakingImpl), data);
+
+        staking = WanderStaking(address(proxy));
+
         token.approve(address(staking), ~uint256(0));
     }
 
@@ -81,5 +88,42 @@ contract WanderStakingTest is Test {
 
         vm.expectRevert();
         staking.unstake(unstakeAmount);
+    }
+
+    function test_spend(uint64 _amount, uint64 _spendAmount) public {
+        // hello nick
+        address to = 0x6F4E4664E9B519DEAB043676D9Aafe6c9621C088;
+
+        vm.assume(_amount > 0);
+        vm.assume(_spendAmount > 0);
+        vm.assume(_amount >= _spendAmount);
+        uint256 amount = uint256(_amount) * (10 ** 18);
+        uint256 spendAmount = uint256(_spendAmount) * (10 ** 18);
+
+        token.mint(address(this), amount);
+        staking.stake(amount);
+
+        staking.spendFromStake(to, spendAmount);
+
+        assert(token.balanceOf(to) == spendAmount);
+        assert(staking.getAmountStaked(address(this)) == amount - spendAmount);
+        assert(token.balanceOf(address(staking)) == amount - spendAmount);
+    }
+
+    function test_spend_over(uint64 _amount, uint64 _spendAmount) public {
+        // hello nick
+        address to = 0x6F4E4664E9B519DEAB043676D9Aafe6c9621C088;
+
+        vm.assume(_amount > 0);
+        vm.assume(_spendAmount > 0);
+        vm.assume(_amount < _spendAmount);
+        uint256 amount = uint256(_amount) * (10 ** 18);
+        uint256 spendAmount = uint256(_spendAmount) * (10 ** 18);
+
+        token.mint(address(this), amount);
+        staking.stake(amount);
+
+        vm.expectRevert(WanderStaking.InsufficientBalance.selector);
+        staking.spendFromStake(to, spendAmount);
     }
 }

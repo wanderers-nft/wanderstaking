@@ -3,24 +3,35 @@ pragma solidity ^0.8.13;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract WanderStaking is Ownable, Pausable {
+contract WanderStaking is Initializable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
-
-    IERC20 public immutable token;
 
     event Stake(address indexed user, uint256 amount);
     event Unstake(address indexed user, uint256 amount);
+    event SpendFromStake(address indexed user, address indexed to, uint256 amount);
 
     error ZeroAmount();
     error InsufficientBalance();
 
-    mapping(address => uint256) userStake;
+    IERC20 public token;
     uint256 internal totalStaked;
+    mapping(address => uint256) userStake;
 
-    constructor(address initialOwner, IERC20 _token) Ownable(initialOwner) {
+    // @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner, IERC20 _token) public initializer {
+        __Pausable_init();
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
+
         token = _token;
     }
 
@@ -31,6 +42,8 @@ contract WanderStaking is Ownable, Pausable {
     function unpause() public onlyOwner {
         _unpause();
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function stake(uint256 amount) external whenNotPaused {
         if (amount == 0) {
@@ -60,6 +73,24 @@ contract WanderStaking is Ownable, Pausable {
         emit Unstake(msg.sender, amount);
 
         token.safeTransfer(msg.sender, amount);
+    }
+
+    function spendFromStake(address to, uint256 amount) external whenNotPaused {
+        if (amount == 0) {
+            revert ZeroAmount();
+        }
+
+        if (userStake[msg.sender] < amount) {
+            revert InsufficientBalance();
+        }
+
+        userStake[msg.sender] -= amount;
+        totalStaked -= amount;
+
+        emit Unstake(msg.sender, amount);
+        emit SpendFromStake(msg.sender, to, amount);
+
+        token.safeTransfer(to, amount);
     }
 
     function getTotalStaked() external view returns (uint256) {
